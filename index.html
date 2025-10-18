@@ -142,6 +142,9 @@
       </div>
 
       <nav class="chips" id="chips" aria-label="Filtres per categoria"></nav>
+      <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+        <button id="btnInstall" class="btn" style="display:none;">Instal·lar app</button>
+      </div>
     </header>
 
     <div id="stats" class="stats">Mostra tots els contactes</div>
@@ -464,9 +467,25 @@
     // Registrar Service Worker (PWA)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
+        navigator.serviceWorker.register('/agenda/sw.js').catch(()=>{});
       });
     }
+      // Botón instalar (Android/Chrome)
+    let deferredPrompt = null;
+    const btnInstall = document.getElementById('btnInstall');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btnInstall.style.display = 'inline-flex';
+    });
+    btnInstall?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice; // accepted / dismissed
+      deferredPrompt = null;
+      btnInstall.style.display = 'none';
+    });
   </script>
 </body>
 </html>
+
