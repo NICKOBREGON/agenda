@@ -1,11 +1,11 @@
 const CACHE_NAME = "agenda-hospital-v1";
 const ASSETS = [
-  "./",
-  "./index.html",           // renombra si tu archivo tiene otro nombre
-  "./manifest.json",
-  "./icons/icon-512.png",
-  "./icons/icon-192.png",
-  "./icons/icon-180.png"
+  "/agenda/",
+  "/agenda/index.html",
+  "/agenda/manifest.json",
+  "/agenda/icons/icon-512.png",
+  "/agenda/icons/icon-192.png",
+  "/agenda/icons/icon-180.png"
 ];
 
 self.addEventListener("install", (e) => {
@@ -21,7 +21,5 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request))
-  );
+  e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
 });
