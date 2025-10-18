@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Agenda Telefònica · Mòbil</title>
+  <meta name="theme-color" content="#6366f1" />
+  <link rel="manifest" href="manifest.json" />
+  <!-- iOS PWA icons -->
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    :root{
+      --bg-start:#667eea;/* indigo */
+      --bg-end:#764ba2;  /* purple */
+      --card:#ffffff;
+      --txt:#1f2937;     /* gray-800 */
+      --muted:#6b7280;   /* gray-500 */
+      --brand:#6366f1;   /* indigo-500 */
+      --brand-2:#7c3aed; /* violet-600 */
+      --chip:#eef2ff;    /* indigo-50 */
+      --ok:#10b981;      /* emerald-500 */
+      --warn:#f59e0b;    /* amber-500 */
+      --shadow:0 12px 30px rgba(0,0,0,.22);
+      --radius:16px;
+      --radius-lg:22px;
+    }
+
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;
+      background:linear-gradient(135deg,var(--bg-start) 0%,var(--bg-end) 100%);
+      color:#fff;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+
+    .app{
+      min-height:100dvh; /* mobile viewport */
+      display:flex; flex-direction:column;
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+
+    /* Sticky header */
+    .header{
+      position:sticky; top:0; z-index:10;
+      padding: clamp(14px, 3.2vw, 18px) 16px 10px 16px;
+      background:linear-gradient(135deg, rgba(102,126,234,.95) 0%, rgba(118,75,162,.95) 100%);
+      backdrop-filter:saturate(140%) blur(8px);
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .title{display:flex;align-items:center;gap:10px;}
+    .title h1{font-size: clamp(20px, 5.5vw, 28px); margin:0; font-weight:800; letter-spacing:.2px;}
+    .subtitle{opacity:.9; font-size: clamp(12px, 3.3vw, 14px); margin-top:4px;}
+
+    /* Search box */
+    .search{
+      margin-top:12px; position:relative;
+    }
+    .search input{
+      width:100%; border:0; outline:0;
+      padding: 14px 44px 14px 46px;
+      font-size: clamp(15px, 4.2vw, 17px);
+      border-radius: var(--radius-lg);
+      background:#fff; color:#111;
+      box-shadow: var(--shadow);
+    }
+    .search .icon{position:absolute; left:14px; top:50%; transform:translateY(-50%); opacity:.6; font-size:18px;}
+    .search .clear{position:absolute; right:10px; top:50%; transform:translateY(-50%); background:#f3f4f6; border:0; border-radius:12px; padding:6px 10px; font-size:14px; }
+
+    /* Chips (category filters) */
+    .chips{ margin:12px 0 0; display:flex; gap:8px; overflow:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+    .chip{ flex:0 0 auto; padding:8px 12px; border-radius:999px; background:var(--chip); color:#3730a3; font-weight:600; font-size:13px; border:1px solid rgba(99,102,241,.25); }
+    .chip.active{ background:#fff; color:var(--brand-2); box-shadow:0 6px 16px rgba(0,0,0,.14); }
+
+    /* Stats */
+    .stats{ padding:10px 16px; font-size:13px; opacity:.95; }
+
+    /* Results list */
+    .list{
+      flex:1; overflow:auto; padding: 8px 12px 18px; gap:10px; display:grid; grid-template-columns:1fr; 
+    }
+
+    .card{
+      background:var(--card); color:var(--txt);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:12px; display:grid; grid-template-columns:1fr auto; grid-template-areas:
+        'name actions'
+        'meta actions'
+        'phone actions';
+      gap:8px;
+    }
+    .name{ grid-area:name; font-weight:800; letter-spacing:.2px; font-size: clamp(16px, 4.6vw, 18px); }
+    .meta{ grid-area:meta; font-size:12px; color:var(--muted); }
+    .phone{ grid-area:phone; display:flex; align-items:center; gap:10px; font-weight:700; font-size: clamp(16px, 4.6vw, 18px); color:var(--brand-2); }
+
+    .actions{ grid-area:actions; display:flex; flex-direction:column; gap:8px; align-items:end; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px; 
+      min-height:44px; padding:0 12px; border-radius:12px; 
+      border:1px solid rgba(99,102,241,.25); background:#fff; color:var(--brand-2); font-weight:800; font-size:14px;
+    }
+    .btn.primary{ background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; border-color:transparent; }
+    .btn:active{ transform: translateY(1px); }
+
+    .category-tag{ display:inline-block; background:#f3f4f6; color:#374151; padding:4px 10px; border-radius:999px; font-size:12px; }
+    .highlight{ background:#fff3cd; padding:0 3px; border-radius:4px; }
+
+    /* Empty state */
+    .empty{ text-align:center; color:#fff; padding:34px 16px; opacity:.95; }
+    .empty small{display:block; opacity:.9; margin-top:8px}
+
+    /* Floating to-top button */
+    .toTop{ position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); z-index:20; display:none; }
+
+    @media (min-width:720px){
+      .list{ grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header" role="banner">
+      <div class="title">
+        <div style="font-size:22px">📞</div>
+        <div>
+          <h1>Agenda Telefònica</h1>
+          <div class="subtitle">Hospital · Directori d'Urgències</div>
+        </div>
+      </div>
+
+      <div class="search" role="search">
+        <span class="icon" aria-hidden="true">🔎</span>
+        <input id="searchInput" inputmode="search" autocomplete="off" placeholder="Cerca servei, departament o número…" />
+        <button id="clearBtn" class="clear" aria-label="Netejar cerca">✕</button>
+      </div>
+
+      <nav class="chips" id="chips" aria-label="Filtres per categoria"></nav>
+    </header>
+
+    <div id="stats" class="stats">Mostra tots els contactes</div>
+    <main id="list" class="list" role="list"></main>
+
+    <button id="toTop" class="btn toTop" aria-label="Pujar al principi">↑ Dalt</button>
+  </div>
+
+  <script>
+    const phoneData = [
+      { name: "SUPER.URG (NÚRIA)", phone: "2638 / 4334", category: "Urgències" },
+      { name: "SUPER. GENERAL", phone: "4332", category: "Urgències" },
+      { name: "CAP DE GUARDIA", phone: "6116", category: "Urgències" },
+      { name: "CAP SERVEI (GISPI)", phone: "2320 / 4475", category: "Urgències" },
+      { name: "SUPER UCI", phone: "4457", category: "UCI" },
+      { name: "INF TRIATGE", phone: "4419 / 4710", category: "Infermeria" },
+      { name: "INF CRITICS", phone: "4437", category: "Infermeria" },
+      { name: "INF E.R.R", phone: "4434", category: "Infermeria" },
+      { name: "INF CIRCUIT", phone: "4472", category: "Infermeria" },
+      { name: "INF TRAUMA", phone: "4471", category: "Infermeria" },
+      { name: "INFER URG PED", phone: "4429", category: "Infermeria" },
+      { name: "INFERMERA TRIATGE", phone: "4419 / 4710", category: "Infermeria" },
+      { name: "INFERM.CRITICS", phone: "4437", category: "Infermeria" },
+      { name: "INFERM. E.R.R", phone: "4434", category: "Infermeria" },
+      { name: "INFER. CIRCUIT RÀPID", phone: "4472", category: "Infermeria" },
+      { name: "INFER. TRAUMA", phone: "4471", category: "Infermeria" },
+      { name: "INF. OSTOMIES", phone: "4391", category: "Infermeria" },
+      { name: "INF.PREVENTIVA", phone: "4383", category: "Infermeria" },
+      { name: "INF. CLÍNICA UCA", phone: "4599", category: "Infermeria" },
+      { name: "ZEL. TRAUMA", phone: "4454", category: "Zeladors" },
+      { name: "ZELADOR OBSERVACIO", phone: "4456", category: "Zeladors" },
+      { name: "ZELADOR BOXS", phone: "4455", category: "Zeladors" },
+      { name: "ZELADOR TRIATGE", phone: "4453", category: "Zeladors" },
+      { name: "ZELADOR PED.", phone: "4428", category: "Zeladors" },
+      { name: "ZEL. OBS i CRITICS", phone: "4456", category: "Zeladors" },
+      { name: "ZELADOR ERR", phone: "4435", category: "Zeladors" },
+      { name: "ADJUNT A", phone: "4449", category: "Adjunts" },
+      { name: "ADJUNT B", phone: "4450", category: "Adjunts" },
+      { name: "ADJUNT C", phone: "4380", category: "Adjunts" },
+      { name: "ADJUNT D", phone: "4452", category: "Adjunts" },
+      { name: "ADJUNT R", phone: "4451", category: "Adjunts" },
+      { name: "ADJUNT P / S", phone: "4356 / 4594", category: "Adjunts" },
+      { name: "ADJUNT P", phone: "4356", category: "Adjunts" },
+      { name: "ADJUNT S", phone: "4594", category: "Adjunts" },
+      { name: "ADJUNT L", phone: "4570", category: "Adjunts" },
+      { name: "ADJUNT TRAUMA", phone: "4308", category: "Adjunts" },
+      { name: "ADJUNT INTERNA", phone: "4304", category: "Adjunts" },
+      { name: "ADJUNT NEURO", phone: "4414", category: "Adjunts" },
+      { name: "ADJUNT GINE", phone: "4310 / 4311", category: "Adjunts" },
+      { name: "ADJUNT CIRURGIA", phone: "4307 / 4306", category: "Adjunts" },
+      { name: "ADJUNT PEDIATRIA", phone: "4300", category: "Adjunts" },
+      { name: "ADJUNT NEUROCIRURGIA", phone: "4325", category: "Adjunts" },
+      { name: "ADJUNT DIGESTIU", phone: "4413", category: "Adjunts" },
+      { name: "ADJUNT ONCO", phone: "4316", category: "Adjunts" },
+      { name: "ADJUNT HEMATO", phone: "4322", category: "Adjunts" },
+      { name: "ADJUNT PNEUMO", phone: "4409", category: "Adjunts" },
+      { name: "ADJUNT UROLOGIA", phone: "4329", category: "Adjunts" },
+      { name: "ADJUNT NEFRO", phone: "4323", category: "Adjunts" },
+      { name: "ADJUNT C.TORACICA", phone: "4390", category: "Adjunts" },
+      { name: "ADJUNT VASCULAR", phone: "4324", category: "Adjunts" },
+      { name: "ADJUNT DERMATO", phone: "4261 / 2479", category: "Adjunts" },
+      { name: "ADJUNT C.PLASTICA", phone: "2705 / 4263", category: "Adjunts" },
+      { name: "ADJUNT ORL", phone: "4327", category: "Adjunts" },
+      { name: "RESI TRAUMA", phone: "4309", category: "Residents" },
+      { name: "RESI INTERNA", phone: "4333", category: "Residents" },
+      { name: "RESI NEURO", phone: "4386", category: "Residents" },
+      { name: "RESI GINE", phone: "4311 / 4476", category: "Residents" },
+      { name: "RESI CIRURGIA", phone: "4303", category: "Residents" },
+      { name: "RESI PEDIATRIA", phone: "4313", category: "Residents" },
+      { name: "RESI URG", phone: "4556", category: "Residents" },
+      { name: "TRAUMA", phone: "2631", category: "Zones" },
+      { name: "CONTROL A", phone: "2280", category: "Zones" },
+      { name: "CONTROL B", phone: "2392", category: "Zones" },
+      { name: "CONTROL C", phone: "2337", category: "Zones" },
+      { name: "CRITICS", phone: "2566", category: "Zones" },
+      { name: "BUTAQUES", phone: "4290", category: "Zones" },
+      { name: "TRIATGE", phone: "2655", category: "Zones" },
+      { name: "OBSERVACIÓ METGE", phone: "4291", category: "Zones" },
+      { name: "OBSERVACIÓ INF", phone: "2362", category: "Zones" },
+      { name: "OBSERVACIÓ M/INF", phone: "4291 / 2362", category: "Zones" },
+      { name: "CONSULTA 1", phone: "2905", category: "Consultes" },
+      { name: "CONSULTA 2", phone: "2904", category: "Consultes" },
+      { name: "CONSULTA 3", phone: "2903", category: "Consultes" },
+      { name: "CONSULTA 3/ORL", phone: "2903", category: "Consultes" },
+      { name: "CONSULTA 4/OFT", phone: "2902", category: "Consultes" },
+      { name: "CONSULTA 5", phone: "2901", category: "Consultes" },
+      { name: "CONSULTA 5/ORL", phone: "2901", category: "Consultes" },
+      { name: "UCI/UCO", phone: "2484 / 2400", category: "UCI" },
+      { name: "REANIMACIÓ", phone: "2412 / 2445", category: "Urgències" },
+      { name: "CATÀSTROFES", phone: "2297", category: "Urgències" },
+      { name: "ECO", phone: "2794", category: "Proves" },
+      { name: "MARCAPÀS", phone: "2257", category: "Proves" },
+      { name: "TAC/RNM", phone: "2369 / 2632", category: "Proves" },
+      { name: "TAC NEURO MATÍ", phone: "4424", category: "Proves" },
+      { name: "PASSADIS RX", phone: "2589", category: "Proves" },
+      { name: "RX PORTÀTIL", phone: "4701", category: "Proves" },
+      { name: "INCENDIS", phone: "2626", category: "Emergències" },
+      { name: "SEGURETAT", phone: "4342 / 4392 / 2355", category: "Seguretat" },
+      { name: "SEGURETAT TRIATGE", phone: "4496", category: "Seguretat" },
+      { name: "AGRESSIO", phone: "#2702", category: "Emergències" },
+      { name: "CUINA", phone: "2406", category: "Serveis" },
+      { name: "ELECTROMED", phone: "4347", category: "Serveis" },
+      { name: "MANTENIMENT", phone: "2348 / 4376", category: "Serveis" },
+      { name: "NETEJA", phone: "4448", category: "Serveis" },
+      { name: "NETEJA MAQ AILLATS", phone: "4381", category: "Serveis" },
+      { name: "ADMISSIONS", phone: "2281 / 2520", category: "Administració" },
+      { name: "ADM PROGRAMATS", phone: "2304 / 2218", category: "Administració" },
+      { name: "REGISTRE", phone: "2311", category: "Administració" },
+      { name: "RRHH", phone: "2202 / 2583", category: "Administració" },
+      { name: "FORMACIÓ", phone: "4320", category: "Administració" },
+      { name: "CRISTINA FARMÀCIA", phone: "4548", category: "Farmàcia" },
+      { name: "FARMÀCIA", phone: "2274 / 2308", category: "Farmàcia" },
+      { name: "FARMACÈUTICA URG", phone: "4548", category: "Farmàcia" },
+      { name: "LABORATORI URG", phone: "2261 / 4388", category: "Laboratori" },
+      { name: "LABORATORI URG/HSC", phone: "2261 / 6140", category: "Laboratori" },
+      { name: "LABORATORI ADJUNT", phone: "4388", category: "Laboratori" },
+      { name: "BANC SANG", phone: "2385", category: "Laboratori" },
+      { name: "UDEN", phone: "2595 / 2225", category: "Serveis" },
+      { name: "ENDOSCÒPIA", phone: "2869 / 2723", category: "Proves" },
+      { name: "HEMODINAMIA", phone: "3685 / 2476", category: "Proves" },
+      { name: "UBP", phone: "2201", category: "Serveis" },
+      { name: "PREVENTIVA", phone: "2492", category: "Serveis" },
+      { name: "MAGATZEM", phone: "2223", category: "Serveis" },
+      { name: "ESTERILITZACIÓ", phone: "2470", category: "Serveis" },
+      { name: "ISABEL (HOTELERIA)", phone: "4341", category: "Serveis" },
+      { name: "LOGARITME", phone: "2779", category: "Serveis" },
+      { name: "UCA", phone: "6128", category: "Serveis" },
+      { name: "SERVEI RELIGIÓS", phone: "4366", category: "Serveis" },
+      { name: "INTÈRPRET", phone: "4350 / 6163 / 6155", category: "Serveis" },
+      { name: "PSIQUIATRIA", phone: "616968900 / 4567", category: "Especialitats" },
+      { name: "TREBALL SOCIAL", phone: "4343 / 4599 / 4365", category: "Serveis" },
+      { name: "SALA SESSIONS", phone: "2636", category: "Serveis" },
+      { name: "OFFICE", phone: "2857", category: "Serveis" },
+      { name: "SEM", phone: "900101918", category: "Emergències" },
+      { name: "SAP", phone: "6200", category: "Serveis" },
+      { name: "INFORMATICA", phone: "2777 / 4444", category: "Serveis" },
+      { name: "ETI", phone: "4458", category: "Serveis" },
+      { name: "SUPERUSUARIA", phone: "4375", category: "Serveis" },
+      { name: "HAD BUSCA METGE", phone: "4597 / 6186", category: "HAD" },
+      { name: "HAD ADMISSIONS", phone: "2318", category: "HAD" },
+      { name: "HAD INFERMERA", phone: "6185 / 6187", category: "HAD" },
+      { name: "ANATOMIA PAT.", phone: "2577", category: "Especialitats" },
+      { name: "ANESTÈSIA RESI", phone: "4367 / 4477", category: "Especialitats" },
+      { name: "ANESTÈSIA ADJUNT", phone: "4318 / 4319", category: "Especialitats" },
+      { name: "ADJ/ RES ANEST", phone: "4318 / 4367", category: "Especialitats" },
+      { name: "CARDIO RESI", phone: "4317", category: "Especialitats" },
+      { name: "CARDIO ADJUNT", phone: "4432", category: "Especialitats" },
+      { name: "ADJ/RES CARDIO", phone: "4432 / 4317", category: "Especialitats" },
+      { name: "C. MAXIL·LO", phone: "4330", category: "Especialitats" },
+      { name: "C.PLÀSTICA", phone: "2705 / 2451 / 4263", category: "Especialitats" },
+      { name: "C. TORÀCICA", phone: "4390", category: "Especialitats" },
+      { name: "C.VASCULAR", phone: "4324", category: "Especialitats" },
+      { name: "CIRURGIA RESI", phone: "4303", category: "Especialitats" },
+      { name: "CIRURGIA ADJUNT", phone: "4307 / 4306", category: "Especialitats" },
+      { name: "DERMATO", phone: "4261 / 2479", category: "Especialitats" },
+      { name: "DIGESTIU", phone: "4413", category: "Especialitats" },
+      { name: "ENDOCRINOLOGIA", phone: "4572", category: "Especialitats" },
+      { name: "GINE RESI", phone: "4476", category: "Especialitats" },
+      { name: "GINE ADJUNT", phone: "4310 / 4311", category: "Especialitats" },
+      { name: "HEMATOLOGIA", phone: "4322", category: "Especialitats" },
+      { name: "INTERNA RESI", phone: "4333", category: "Especialitats" },
+      { name: "INTERNA ADJUNT/INFE", phone: "4304 / 4339", category: "Especialitats" },
+      { name: "INTERNA ADJUNT/SUPORT", phone: "4304 / 4408", category: "Especialitats" },
+      { name: "NEFROLOGIA", phone: "4323", category: "Especialitats" },
+      { name: "NEURO ICTUS", phone: "4414", category: "Especialitats" },
+      { name: "NEURO RESI", phone: "4386", category: "Especialitats" },
+      { name: "NEURO VASCULAR", phone: "4462", category: "Especialitats" },
+      { name: "NEUROCIRURGIA", phone: "4325", category: "Especialitats" },
+      { name: "OFTALMOLOGIA", phone: "4546", category: "Especialitats" },
+      { name: "ONCOLOGIA RESI", phone: "4316", category: "Especialitats" },
+      { name: "ONCOLOGIA PLANTA", phone: "4431", category: "Especialitats" },
+      { name: "OTORRINO", phone: "4327", category: "Especialitats" },
+      { name: "PEDIA RESI", phone: "4476 / 4313", category: "Especialitats" },
+      { name: "PEDIA ADJUNT", phone: "4300 / 4312", category: "Especialitats" },
+      { name: "PNEUMOLOGIA", phone: "4409", category: "Especialitats" },
+      { name: "RADIOLOGIA", phone: "4314", category: "Especialitats" },
+      { name: "RAD.INTERVENCIONISTA", phone: "671512931", category: "Especialitats" },
+      { name: "RADIOTERAPIA", phone: "4412", category: "Especialitats" },
+      { name: "TRAUMA RESI", phone: "4309", category: "Especialitats" },
+      { name: "TRAUMA ADJ", phone: "4308", category: "Especialitats" },
+      { name: "UCI RESI", phone: "4436", category: "UCI" },
+      { name: "UCI ADJUNT", phone: "4321 / 4345", category: "UCI" },
+      { name: "ADJ/RESI UCI", phone: "4345 / 4321 / 4436", category: "UCI" },
+      { name: "UCI SANTA CATE", phone: "667079969", category: "UCI" },
+      { name: "UIC", phone: "4470", category: "UCI" },
+      { name: "UROLOGIA", phone: "4329", category: "Especialitats" },
+      { name: "UACO", phone: "4498", category: "Serveis" },
+      { name: "PROA-INFE", phone: "4339", category: "Serveis" },
+      { name: "CAFETERIA PERSONAL", phone: "2403", category: "Serveis" },
+      { name: "CAFETERIA PÚBLIC", phone: "2562", category: "Serveis" },
+      { name: "CODI PPT 0", phone: "#2728", category: "Emergències" },
+      { name: "CODI PPT 1", phone: "#2703", category: "Emergències" },
+      { name: "SANTI DONACIÓ", phone: "4558", category: "Serveis" },
+      { name: "SALUT PÚBLICA (MATI)", phone: "872480828", category: "Serveis" },
+      { name: "SUVEC", phone: "627480828", category: "Serveis" },
+      { name: "TÈCNIC OXIGEN", phone: "667124471", category: "Serveis" },
+      { name: "INCIDÈNCIES OXIGEN", phone: "900197125", category: "Serveis" }
+    ];
+
+    const $ = (s,root=document)=>root.querySelector(s);
+    const $$ = (s,root=document)=>Array.from(root.querySelectorAll(s));
+
+    const searchInput = $('#searchInput');
+    const clearBtn = $('#clearBtn');
+    const list = $('#list');
+    const stats = $('#stats');
+    const chips = $('#chips');
+    const toTop = $('#toTop');
+
+    /* Utils */
+    const normalize = (t)=> t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[·./-]/g,' ');
+    const phoneHref = (p)=> 'tel:' + encodeURIComponent(p.replace(/\s/g,''));
+
+    function highlight(text, query){
+      if(!query) return text;
+      const n = normalize(text); const nq = normalize(query);
+      const i = n.indexOf(nq);
+      if(i===-1) return text;
+      // Best-effort highlight using original string slices
+      return text.substring(0,i) + '<span class="highlight">' + text.substring(i,i+query.length) + '</span>' + text.substring(i+query.length);
+    }
+
+    /* Build category chips */
+    const cats = Array.from(new Set(phoneData.map(x=>x.category))).sort((a,b)=>a.localeCompare(b));
+    let activeCat = localStorage.getItem('agenda_activeCat') || 'Totes';
+    function renderChips(){
+      const all = ['Totes', ...cats];
+      chips.innerHTML = all.map(c=>`<button class="chip ${c===activeCat?'active':''}" data-cat="${c}">${c}</button>`).join('');
+    }
+
+    /* Search + filter */
+    function filterData(q){
+      const nq = normalize(q||'');
+      return phoneData.filter(it=>{
+        const matchQ = !nq || normalize(it.name).includes(nq) || it.phone.replace(/\s/g,'').includes((q||'').replace(/\s/g,'')) || normalize(it.category).includes(nq);
+        const matchC = (activeCat==='Totes') || it.category===activeCat;
+        return matchQ && matchC;
+      });
+    }
+
+    function renderList(data, q){
+      if(!data.length){
+        list.innerHTML = `<div class="empty">❌ No s'han trobat resultats per "${q}"<small>Prova amb altres paraules clau o canvia la categoria.</small></div>`;
+        stats.textContent = '0 contactes';
+        return;
+      }
+      const html = data.map(it=>{
+        const tel = phoneHref(it.phone);
+        return `<article class="card" role="listitem">
+          <div class="name">${highlight(it.name,q||'')}</div>
+          <div class="meta"><span class="category-tag">${it.category}</span></div>
+          <div class="phone">📞 <a class="phone-link" href="${tel}" aria-label="Trucar a ${it.name}">${it.phone}</a></div>
+          <div class="actions">
+            <a class="btn primary" href="${tel}" aria-label="Trucar ara">Trucar</a>
+            <button class="btn copy" data-copy="${it.phone}" aria-label="Copiar número">Copiar</button>
+          </div>
+        </article>`
+      }).join('');
+      list.innerHTML = html;
+      stats.textContent = `${data.length} contacte${data.length!==1?'s':''} trobat${data.length!==1?'s':''}`;
+
+      // Bind copy buttons
+      $$('.btn.copy', list).forEach(b=>{
+        b.addEventListener('click', async (e)=>{
+          const nr = e.currentTarget.getAttribute('data-copy');
+          try{ await navigator.clipboard.writeText(nr); toast('Número copiat'); }catch{ toast('No s\'ha pogut copiar'); }
+        });
+      });
+    }
+
+    /* Simple toast */
+    let toastEl; function toast(msg){
+      if(!toastEl){ toastEl = document.createElement('div'); document.body.appendChild(toastEl); }
+      toastEl.textContent = msg;
+      Object.assign(toastEl.style,{
+        position:'fixed', left:'50%', bottom:`calc(18px + env(safe-area-inset-bottom))`, transform:'translateX(-50%)',
+        background:'#111', color:'#fff', padding:'10px 14px', borderRadius:'12px', boxShadow:'0 8px 20px rgba(0,0,0,.35)', zIndex:50,
+        opacity:'0', transition:'opacity .2s ease, transform .2s ease', fontSize:'14px'
+      });
+      requestAnimationFrame(()=>{ toastEl.style.opacity='1'; toastEl.style.transform='translate(-50%, -4px)'; });
+      setTimeout(()=>{ toastEl.style.opacity='0'; toastEl.style.transform='translate(-50%, 0)'; }, 1200);
+    }
+
+    /* Debounce */
+    const debounce = (fn,ms=150)=>{let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),ms);}};
+
+    function doSearch(){
+      const q = searchInput.value.trim();
+      localStorage.setItem('agenda_query', q);
+      renderList(filterData(q), q);
+      toTop.style.display = (document.scrollingElement.scrollTop>200)?'inline-flex':'none';
+    }
+
+    const debouncedSearch = debounce(doSearch, 140);
+
+    // Events
+    searchInput.addEventListener('input', debouncedSearch);
+    clearBtn.addEventListener('click', ()=>{ searchInput.value=''; doSearch(); searchInput.focus(); });
+
+    chips.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.chip'); if(!btn) return;
+      activeCat = btn.dataset.cat; localStorage.setItem('agenda_activeCat', activeCat);
+      renderChips(); doSearch();
+    });
+
+    // Scroll to top floating button
+    toTop.addEventListener('click', ()=>{ window.scrollTo({top:0,behavior:'smooth'}); });
+    document.addEventListener('scroll', ()=>{
+      toTop.style.display = (document.scrollingElement.scrollTop>200)?'inline-flex':'none';
+    }, {passive:true});
+
+    // Initial paint
+    (function init(){
+      renderChips();
+      searchInput.value = localStorage.getItem('agenda_query') || '';
+      doSearch();
+    })();
+  </script>
+  <script>
+    // Registrar Service Worker (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
