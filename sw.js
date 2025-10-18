@@ -1,4 +1,4 @@
-const CACHE_NAME = "agenda-hospital-v1";
+const CACHE_NAME = "agenda-hospital-v2";
 const ASSETS = [
   "/agenda/",
   "/agenda/index.html",
@@ -23,3 +23,4 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
 });
+
