@@ -147,6 +147,9 @@
       </div>
     </header>
 
+    <!-- Diagnóstico rápido de PWA -->
+    <div id="pwaDiag" class="stats" style="padding:8px 16px;opacity:.95"></div>
+
     <div id="stats" class="stats">Mostra tots els contactes</div>
     <main id="list" class="list" role="list"></main>
 
@@ -440,6 +443,31 @@
 
     const debouncedSearch = debounce(doSearch, 140);
 
+    /* PWA diagnóstico */
+    async function pwaDiagnostics(){
+      const el = document.getElementById('pwaDiag');
+      const items = [];
+      // 1) ¿Controlado por SW?
+      const controlled = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      items.push(`SW controlador: ${controlled ? '✅' : '❌'}`);
+      // 2) Manifest accesible
+      let manifestOk = false; let manifestCT = '';
+      try {
+        const r = await fetch('/agenda/manifest.json', { cache:'no-store' });
+        manifestOk = r.ok; manifestCT = r.headers.get('content-type')||'';
+      } catch {}
+      items.push(`Manifest: ${manifestOk ? '✅' : '❌'} ${manifestCT ? '('+manifestCT+')' : ''}`);
+      // 3) Iconos claves
+      async function check(url){ try{ const r=await fetch(url,{cache:'no-store'}); return r.ok; }catch{ return false; } }
+      const has192 = await check('/agenda/icons/icon-192.png');
+      const has512 = await check('/agenda/icons/icon-512.png');
+      items.push(`Iconos 192/512: ${has192&&has512 ? '✅' : '❌'}`);
+      // 4) display-mode
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      items.push(`Modo standalone: ${standalone ? '✅' : '—'}`);
+      el.textContent = 'Estado PWA → ' + items.join(' · ');
+    }
+
     // Events
     searchInput.addEventListener('input', debouncedSearch);
     clearBtn.addEventListener('click', ()=>{ searchInput.value=''; doSearch(); searchInput.focus(); });
@@ -455,6 +483,9 @@
     document.addEventListener('scroll', ()=>{
       toTop.style.display = (document.scrollingElement.scrollTop>200)?'inline-flex':'none';
     }, {passive:true});
+
+    // Diagnóstico inicial
+    pwaDiagnostics();
 
     // Initial paint
     (function init(){
